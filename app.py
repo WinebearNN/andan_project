@@ -29,9 +29,8 @@ def resize_to_256(image: Image.Image) -> Image.Image:
 
 def dummy_process_image(image: Image.Image) -> tuple[Image.Image, str]:
     time.sleep(2)
-    processed = image.convert("L").convert("RGB")
-    message = "Обработка завершена: изображение переведено в оттенки серого."
-    return processed, message
+    message = "Обработка завершена"
+    return image, message
 
 
 def image_to_base64_png(image: Image.Image) -> str:
@@ -56,11 +55,21 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': 'Файл не выбран'}), 400
 
-    if not allowed_file(file.filename):
+    filename = file.filename
+
+    if not allowed_file(filename):
         return jsonify({'error': 'Разрешены только PNG/JPG/JPEG/TIF/TIFF файлы'}), 400
 
     try:
-        image = Image.open(file.stream).convert("RGB")
+        name_lower = filename.lower()
+
+        if name_lower.endswith((".tif", ".tiff")):
+            # Для TIF-файлов используем полноценное цветное изображение
+            image = Image.open(file.stream)
+            if image.mode not in ("RGB", "RGBA"):
+                image = image.convert("RGB")
+        else:
+            image = Image.open(file.stream).convert("RGB")
 
         resized = resize_to_256(image)
 
@@ -82,6 +91,40 @@ def upload_file():
         }), 200
     except Exception as exc:
         return jsonify({'error': f'Ошибка обработки изображения: {exc}'}), 500
+
+
+@app.route('/preview', methods=['POST'])
+def preview():
+    if 'file' not in request.files:
+        return jsonify({'error': 'Файл не найден'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'Файл не выбран'}), 400
+
+    filename = file.filename
+
+    if not allowed_file(filename):
+        return jsonify({'error': 'Разрешены только PNG/JPG/JPEG/TIF/TIFF файлы'}), 400
+
+    try:
+        name_lower = filename.lower()
+
+        if name_lower.endswith((".tif", ".tiff")):
+            # Для TIF-файлов используем полноценное цветное изображение
+            image = Image.open(file.stream)
+            if image.mode not in ("RGB", "RGBA"):
+                image = image.convert("RGB")
+        else:
+            image = Image.open(file.stream).convert("RGB")
+
+        resized = resize_to_256(image)
+        preview_b64 = image_to_base64_png(resized)
+
+        return jsonify({'preview_image': preview_b64}), 200
+    except Exception as exc:
+        return jsonify({'error': f'Ошибка предпросмотра изображения: {exc}'}), 500
 
 
 if __name__ == '__main__':
