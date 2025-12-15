@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .upload-area {
+            width: 100%;
+            aspect-ratio: 1;
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+            transform: scale(1.02);
+        }
+
+        .upload-area.has-image {
+            border: 3px solid #667eea;
+            background: transparent;
+        }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 64px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 18px;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .upload-text.has-image {
+            display: none;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 10px;
+        }
+
+        .analyze-btn {
+            width: 100%;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .analyze-btn:active {
+            transform: translateY(0);
+        }
+
+        .analyze-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .filename {
+            margin-top: 15px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Analyzer</h1>
+        <div class="upload-area" id="uploadArea">
+            <input type="file" id="fileInput" accept=".png" />
+            <div class="upload-icon" id="uploadIcon">📁</div>
+            <div class="upload-text" id="uploadText">
+                Нажмите, чтобы загрузить PNG изображение
+            </div>
+            <img id="previewImage" class="preview-image" style="display: none;" />
+        </div>
+        <div class="filename" id="filename"></div>
+        <div class="error-message" id="errorMessage"></div>
+        <div class="filename" id="resultText" style="margin-top: 10px; font-weight: 600;"></div>
+        <button class="analyze-btn" id="analyzeBtn" disabled>Анализировать</button>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewImage = document.getElementById('previewImage');
+        const uploadIcon = document.getElementById('uploadIcon');
+        const uploadText = document.getElementById('uploadText');
+        const filename = document.getElementById('filename');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultText = document.getElementById('resultText');
+
+        let selectedFile = null;
+
+        // Обработчик клика на область загрузки
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Обработчик выбора файла
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                // Проверка формата (на клиенте — PNG/JPEG, на сервере есть доп. проверка)
+                if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+                    errorMessage.style.color = '#e74c3c';
+                    errorMessage.textContent = 'Пожалуйста, выберите PNG/JPG/JPEG файл';
+                    return;
+                }
+
+                errorMessage.textContent = '';
+                resultText.textContent = '';
+                selectedFile = file;
+                filename.textContent = `Выбран файл: ${file.name}`;
+
+                // Показ превью
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    previewImage.src = event.target.result;
+                    previewImage.style.display = 'block';
+                    uploadIcon.style.display = 'none';
+                    uploadText.classList.add('has-image');
+                    uploadArea.classList.add('has-image');
+                    analyzeBtn.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Обработчик кнопки Analize
+        analyzeBtn.addEventListener('click', async () => {
+            if (!selectedFile) {
+                errorMessage.textContent = 'Пожалуйста, выберите файл';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Обработка...';
+            errorMessage.style.color = '#666';
+            errorMessage.textContent = 'Изображение обрабатывается...';
+            resultText.textContent = '';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Показываем текст, который вернул метод
+                    resultText.textContent = result.message || 'Обработка завершена.';
+
+                    // Подменяем превью на обработанное изображение
+                    if (result.processed_image) {
+                        previewImage.src = `data:image/png;base64,${result.processed_image}`;
+                        previewImage.style.display = 'block';
+                        uploadIcon.style.display = 'none';
+                        uploadText.classList.add('has-image');
+                        uploadArea.classList.add('has-image');
+                    }
+
+                    errorMessage.style.color = '#27ae60';
+                    errorMessage.textContent = 'Обработка успешно завершена.';
+                } else {
+                    errorMessage.style.color = '#e74c3c';
+                    errorMessage.textContent = result.error || 'Ошибка при загрузке/обработке файла';
+                }
+            } catch (error) {
+                errorMessage.style.color = '#e74c3c';
+                errorMessage.textContent = 'Ошибка соединения с сервером';
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'Анализировать';
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
