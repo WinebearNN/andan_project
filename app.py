@@ -12,7 +12,7 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'tif', 'tiff'}
 
 
 def allowed_file(filename: str) -> bool:
@@ -57,7 +57,7 @@ def upload_file():
         return jsonify({'error': 'Файл не выбран'}), 400
 
     if not allowed_file(file.filename):
-        return jsonify({'error': 'Разрешены только PNG/JPG/JPEG файлы'}), 400
+        return jsonify({'error': 'Разрешены только PNG/JPG/JPEG/TIF/TIFF файлы'}), 400
 
     try:
         image = Image.open(file.stream).convert("RGB")
